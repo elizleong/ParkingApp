@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"> 
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+		<title>PARK'D</title>
+		<link rel="stylesheet" href="mapstyle.css">
+		<script src="map.js" type="text/javascript"></script>
+		<link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700' rel='stylesheet'>
+  		<script src='https://api.tiles.mapbox.com/mapbox.js/v2.1.4/mapbox.js'></script>
+ 		<link href='https://api.tiles.mapbox.com/mapbox.js/v2.1.4/mapbox.css' rel='stylesheet' />
+  
+  <script src='https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/leaflet.markercluster.js'></script>
+  <link href='https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/MarkerCluster.css' rel='stylesheet' />
+  <link href='https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/MarkerCluster.Default.css' rel='stylesheet' />
+
+</head>
+ <div class='sidebar'>
+		<div class='heading'>
+      
+    </div>
+    <div id='listings' class='listings'></div>
+  </div>
+  <div id='map' class='map'> </div>
+  
+	<body class="cbp-spmenu-push">
+		<nav class="cbp-spmenu cbp-spmenu-vertical cbp-spmenu-left" id="cbp-spmenu-s1">
+			<button id="pushOut"><a href="#">X</a></button>
+			<div id="toolbartext">
+			<a href="maps.html" ">HOME</a>
+			<a href="about.html">ABOUT</a>
+			<!-- <a href="#">SETTINGS</a> -->
+			</div>
+		</nav>
+   <section>  <div class="container">
+         <a class="title" href="homepage.html"> <center> <h1> PARK'D </h1>  </center></a> 
+		<button id="showLeft"><img src="slide.png" style="width:50px;height:40px;"></button>
+		<button id="search"><img src="search.png" style="width:40px;height:40px;"></button>
+		</div>
+	</section>
+<div class="fixed">
+	<div class=legend >
+			<main class=first>LEGEND </main> 
+			<div class=handicap> <p> HANDICAP</p> </div> 
+			<div class=streetcleaning> 	<p> STREET CLEANING </p>  </div>	
+			<div class=towaway> 	<p> TOW-AWAY ZONE </p> </div> 
+			<div class=zoneparking> <p> ZONE PARKING</p> </div>  
+			<div class=meters> <p> PARKING METERS</p> </div>
+			<div class=garages> <p> PARKING GARAGES</p> </div>
+			
+	</div>
+</div>	
+		<script>
+			var menuLeft = document.getElementById( 'cbp-spmenu-s1' ),
+				body = document.body;
+			showLeft.onclick = function() {
+				classie.toggle( this, 'active' );
+				classie.toggle( menuLeft, 'cbp-spmenu-open' );
+				disableOther( 'showLeft' );
+			};
+			
+			function disableOther( button ) {
+				if( button !== 'showLeft' ) {
+					classie.toggle( showLeft, 'disabled' );
+				}
+			}
+		
+			pushOut.onclick = function() {
+				classie.toggle( this, 'active' );
+				classie.toggle( menuLeft, 'cbp-spmenu-open' );
+				disableOther( 'showLeft' );
+			};
+			
+			function disableOther( button ) {
+				if( button !== 'showLeft' ) {
+					classie.toggle( pushOut, 'disabled' );
+				}
+			}
+  
+  	var garageDataJSON_list = [];
+  	var disabilityDataJSON_list = [];
+  	//var meterGPSJSON_list = [];
+  	
+  	var geojson = [];
+  	var geojson2 = [];
+  	//var geojson3 = [];
+  	//var geojson4 = [];
+  	
+  	
+  	//garage data:
+  	function loadJSON(callback) {  
+  		 
+		var xobj = new XMLHttpRequest();
+			xobj.overrideMimeType("application/json");
+		xobj.open('GET', 'https://data.sfgov.org/api/views/9qrz-nwix/rows.json?accessType=DOWNLOAD', true); // Replace 'my_data' with the path to your file
+		xobj.onreadystatechange = function () {
+			  if (xobj.readyState == 4 && xobj.status == "200") {
+				// Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+				callback(xobj.responseText);
+			  }
+		};
+		xobj.send(null);
+	}
+	
+  	
+	function garageData() {
+		var actual_JSON;
+		loadJSON(function(response) {
+			// Parse JSON string into object
+			actual_JSON = JSON.parse(response);
+		
+			//console.log(actual_JSON.data[0]);
+			
+			for(var i = 0; i < actual_JSON.data.length; i++){
+					// garageDataJSON_list[i].garageStreetName
+				var actualJSON_object = {
+					"garage" : actual_JSON.data[i],
+					"garageStreetName" : actual_JSON.data[i][9],
+					"garageLatitude" : actual_JSON.data[i][17][1],	
+					"garageLongitude" : actual_JSON.data[i][17][2],
+					"garageType" : actual_JSON.data[i][8],
+				// this is for Olivia to put in the markers <input type = "hidden"
+				// if (garageType == "Private") {
+	// 				garage.style.visibility = "hidden";
+	// 				console.log(garage);
+	// 			}
+				}
+				garageDataJSON_list.push(actualJSON_object);
+			}
+					
+			//console.log(garageDataJSON_list);
+		
+			//console.log("In inner loadJSON function...");
+			//console.log(garageDataJSON_list);
+			createGarageElements();
+			mapStuff(geojson);
+		});
+	}
+	
+	// set up the garage data
+	garageData();
+	disabilityData();
+	//meterGPSData();
+	//console.log("test");
+	
+	// set up Mapbox instance
+  	L.mapbox.accessToken = 'pk.eyJ1Ijoia2FpbGV5MTQiLCJhIjoiMmJlOTJjMmVmN2NjYTNkNjVmNWZkYWUyYjc2Nzg5MTMifQ.xCk6njEZAFMOSp2S7ESoDA';
+  	
+  	//console.log(garageDataJSON_list);
+  	
+  	function createGarageElements(){
+		for(var i = 0; i < garageDataJSON_list.length; i++){
+			var element = {
+				"type": "Feature",
+				"geometry": {
+				  "type": "Point",
+				  "coordinates": [
+					garageDataJSON_list[i].garageLongitude,
+					garageDataJSON_list[i].garageLatitude
+				  ]
+				},
+				"properties": {
+				  //"pPHformated": "$15/hour",
+				  //"pricePerHour": "15",
+				  //"title": "Golden Gateway Garage",
+				  "address": garageDataJSON_list[i].garageStreetName,
+				  "city": "San Francisco",
+				  "country": "United States",
+				  "state": "CA",
+				  'marker-size': 'small',
+				  'marker-color': '#955BA5',
+				  "garagetype": garageDataJSON_list[i].garageType,
+				  // if (prop.garagetype==="Private"){
+// 				  	'marker-color': '#FFFFFF',
+// 				  }
+// 				  else{
+// 				  	'marker-color': '#000000',
+// 				  }
+				}
+			};
+			//console.log(element);
+			geojson.push(element);
+			
+		}
+	}  
+	
+	//disability parking stuff:		
+	function disabilityData() {
+		var actual_JSONDisability;
+		loadJSONDisability(function(response) {
+			// Parse JSON string into object
+			actual_JSONDisability= JSON.parse(response);
+		
+			console.log(actual_JSONDisability.data[0])
+			
+			for(var i = 0; i < actual_JSONDisability.data.length; i++){
+				var actualJSONdisability_object = {
+					"disability" : actual_JSONDisability.data[i],
+					"disabilityStreetName" : actual_JSONDisability.data[i][8],
+					"disabilityLatitude" : actual_JSONDisability.data[i][16][1],	
+					"disabilityLongitude" : actual_JSONDisability.data[i][16][2],
+				}		
+				disabilityDataJSON_list.push(actualJSONdisability_object);
+			}
+			
+			createDisabilityElements();
+			mapStuffdisability(geojson2);
+		});
+	}
+	
+  	function loadJSONDisability(callback) {   
+		var xobjDisability = new XMLHttpRequest();
+			xobjDisability.overrideMimeType("application/json");
+		xobjDisability.open('GET', 'https://data.sfgov.org/api/views/wc6f-brai/rows.json?accessType=DOWNLOAD', true); // Replace 'my_data' with the path to your file
+		xobjDisability.onreadystatechange = function () {
+			  if (xobjDisability.readyState == 4 && xobjDisability.status == "200") {
+				// Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+				callback(xobjDisability.responseText);
+			  }
+		};
+		xobjDisability.send(null);  
+	}
+	
+  			 
+function createDisabilityElements(){
+			for(var i = 0; i < disabilityDataJSON_list.length; i++){
+			var elementDisability = {
+				"type": "Feature",
+				"geometry": {
+				  "type": "Point",
+				  "coordinates": [
+					disabilityDataJSON_list[i].disabilityLongitude,
+					disabilityDataJSON_list[i].disabilityLatitude
+				  ]
+				},
+				"properties": {
+				  //"pPHformated": "$15/hour",
+				  //"pricePerHour": "15",
+				  //"title": "Golden Gateway Garage",
+				  "disabilityaddress": disabilityDataJSON_list[i].disabilityStreetName,
+				  "city": "San Francisco",
+				  "country": "United States",
+				  "state": "CA",
+				  'marker-size': 'small',
+				  'marker-color': '#3b97d3',
+				  
+				}
+		};
+			//console.log(elementDisability);
+			geojson2.push(elementDisability);
+			}
+}
+//end of disability data
+// //meters
+// 
+// function loadJSONmeterGPS(callback) {   
+// 		var xobjmeterGPS = new XMLHttpRequest();
+// 			xobjmeterGPS.overrideMimeType("application/json");
+// 		xobjmeterGPS.open('GET', 'https://data.sfgov.org/api/views/28my-4796/rows.json?accessType=DOWNLOAD', true); // Replace 'my_data' with the path to your file
+// 		xobjmeterGPS.onreadystatechange = function () {
+// 			  if (xobjmeterGPS.readyState == 4 && xobjmeterGPS.status == "200") {
+// 				// Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+// 				callback(xobjmeterGPS.responseText);
+// 			  }
+// 		};
+// 		xobjmeterGPS.send(null);  
+// 	}
+// 	
+// 	//meter data:
+//   	function meterGPSData() {
+// 		var actual_JSONmeterGPS;
+// 		loadJSONmeterGPS(function(response) {
+// 			// Parse JSON string into object
+// 			actual_JSONmeterGPS= JSON.parse(response);
+// 			
+// 			for(var i = 0; i < actual_JSONmeterGPS.data.length; i++){
+// 			 	var actualJSONmeterGPS_object = {
+// 					"metersGPS" : actual_JSONmeterGPS.data[i],
+// 					"meterAddress" : actual_JSONmeterGPS.data[i][18] + "" + actual_JSONmeterGPS.data[i][19],
+// 					"meterCapColor" : actual_JSONmeterGPS.data[i][11],
+// 					"meterLatitude" : actual_JSONmeterGPS.data[i][23][1],	
+// 					"meterLongitude" : actual_JSONmeterGPS.data[i][23][2],
+// 				}		
+// 				meterGPSJSON_list.push(actualJSONmeterGPS_object);
+// 			}
+// 			
+// 			createmeterGPSElements();
+// 			mapStuffmeterGPS(geojson3);
+// 		});
+// 	}
+// 	function createmeterGPSElements(){
+// 			for(var i = 0; i < meterGPSJSON_list.length; i++){
+// 			var elementMeters = {
+// 				"type": "Feature",
+// 				"geometry": {
+// 				  "type": "Point",
+// 				  "coordinates": [
+// 					meterGPSJSON_list[i].meterLongitude,
+// 					meterGPSJSON_list[i].meterLatitude
+// 				  ]
+// 				},
+// 				"properties": {
+// 				  "meteraddress": meterGPSJSON_list[i].meterAddress,
+// 				  "city": "San Francisco",
+// 				  "country": "United States",
+// 				  "state": "CA",
+// 				  'marker-size': 'small',
+// 				  'marker-color': '#000000',
+// 				  "capcolor": meterGPSJSON_list[i].meterCapColor,
+// 				  
+// 				}
+// 			};
+// 			//console.log(elementMeters);
+// 			geojson3.push(elementMeters);
+// 			}
+// 	}
+  var map = L.mapbox.map('map', 'kailey14.4ef6fb70')
+  	.addLayer(L.mapbox.tileLayer('mapbox.streets'))
+ 	.addControl(L.mapbox.geocoderControl('mapbox.places', {
+ 	}));
+ 
+ 
+function makeGroup(color) {
+  return new L.MarkerClusterGroup({
+	iconCreateFunction: function(cluster) {
+	  return new L.DivIcon({
+		iconSize: [20, 20],
+		html: '<div style="text-align:center;color:#fff;background:' +
+		color + '">' + cluster.getChildCount() + '</div>'
+	  });
+	}
+  }).addTo(map);
+}
+ 
+  map.scrollWheelZoom.disable();
+  
+	function mapStuff(list){
+		var listings = document.getElementById('listings');
+	  	var parkingGarages = L.mapbox.featureLayer();
+	  	
+	  	var markersgarage = new L.MarkerClusterGroup(
+	  		{animateAddingMarker:true, 
+	  		maxClusterRadius: 75, 
+	  		//spiderfyOnMaxZoom: true, 
+	  		zoomToBoundsOnClick: true, 
+	  		disableClusteringAtZoom: 17,
+	  		iconCreateFunction: function(cluster) {
+				  return new L.DivIcon({
+					iconSize: [30, 20],
+					// 'marker-symbol': cluster.getChildCount(),
+//           			'marker-color': '#422'
+					
+					html: '<div style="text-align:center;color:#fff;background:' +
+					'#955BA5' + '">' + cluster.getChildCount() + '</div>'
+				  });
+				}
+	  	});
+	  	parkingGarages.setGeoJSON(geojson);
+	  	
+	  	
+	  	map.fitBounds(parkingGarages.getBounds());
+	  
+	  	markersgarage.addLayer(parkingGarages);
+		map.addLayer(markersgarage);
+	  	
+	  
+	  	markersgarage.on('cluseterclick', function (a) {a.layer.zoomToBounds();});
+	  	markersgarage.on('cluseterclick', function (a) { mapStuff(list)});
+	 	parkingGarages.eachLayer(function(locale) {
+			// Shorten locale.feature.properties to just `prop` so we're not
+			// writing this long form over and over again.
+			var prop = locale.feature.properties;
+			// Each marker on the map.
+			var popup = '<h3>PARKING GARAGES</h3><div>' + prop.address;
+			var listing = listings.appendChild(document.createElement('div'));
+			listing.className = 'item';
+			var link = listing.appendChild(document.createElement('a'));
+			link.href = '#';
+			link.className = 'garageTitle';
+			
+			link.innerHTML = prop.address += ' &middot; ' + "PARKING GARAGES";
+	
+			var details = listing.appendChild(document.createElement('div'));
+			if (prop.title) {
+			  details.innerHTML = "Parking Garages";
+			}
+	
+			// if (prop.garageType){
+// 				details.innerHTML += ' &middot; ' + prop.garageType;
+// 			}
+			// else{ 
+// 				details.innerHTML += ' &middot; ' + "CLOSED";
+// 			}
+		
+			link.onclick = function() {
+			  setActive(listing);
+			  // When a menu item is clicked, animate the map to center
+			  // its associated locale and open its popup.
+			  map.setView(locale.getLatLng(), 16);
+			  locale.openPopup();
+			  return false;
+			};
+			// Marker interaction
+			locale.on('click', function(e) {
+			  // 1. center the map on the selected marker.
+			  map.panTo(locale.getLatLng());
+			  // 2. Set active the markers associated listing.
+			  setActive(listing);
+			});
+			popup += '</div>';
+			locale.bindPopup(popup);
+		});
+	 
+	}
+	  
+	  function setActive(el) {
+		var clickPlaces = listings.getElementsByTagName('div');
+		for (var i = 0; i < clickPlaces.length; i++) {
+		  clickPlaces[i].className = clickPlaces[i].className
+		  .replace(/active/, '').replace(/\s\s*$/, '');
+		}
+		el.className += ' active';
+	  }
+	  
+	 
+	function mapStuffdisability(list2){
+		  var listings = document.getElementById('listings');
+		  var parkingDisability = L.mapbox.featureLayer();
+	  
+		  var markers = new L.MarkerClusterGroup({
+		  animateAddingMarker:true,
+		  maxClusterRadius: 75, 
+		   //spiderfyOnMaxZoom: true, 
+		   zoomToBoundsOnClick: true,
+		   iconCreateFunction: function(cluster) {
+			   return new L.DivIcon({
+				   iconSize: [30, 20],
+				   html: '<div style="text-align:center;color:#fff;background:' +
+				   '#3b97d3' + '">' + cluster.getChildCount() + '</div>'
+				});
+			} 
+		   });
+	  
+		  console.log(geojson2);
+		  parkingDisability.setGeoJSON(geojson2);
+		  map.fitBounds(parkingDisability.getBounds());
+	  
+		  markers.addLayer(parkingDisability);
+		  map.addLayer(markers);
+	  
+		  markers.on('cluseterclick', function (a) {a.layer.zoomToBounds();});
+		  markers.on('cluseterclick', function (a) { mapStuffdisability(list)});
+	  
+	  	parkingDisability.eachLayer(function(locale) {
+		// Shorten locale.feature.properties to just `prop` so we're not
+		// writing this long form over and over again.
+		var prop = locale.feature.properties;
+		// Each marker on the map.
+		var popup = '<h2>HANDICAP PARKING</h2><div>' + prop.disabilityaddress;
+		var listing = listings.appendChild(document.createElement('div'));
+		listing.className = 'item';
+		var link = listing.appendChild(document.createElement('a'));
+		link.href = '#';
+		link.className = 'title';
+		link.innerHTML = prop.disabilityaddress += ' &middot; ' + "HANDICAP PARKING";
+	
+		var details = listing.appendChild(document.createElement('div'));
+		if (prop.title) {
+		  details.innerHTML = "Handicap Parking";
+		}
+	
+		// if (prop.hoursopen){
+// 			details.innerHTML += ' &middot; ' + prop.hoursopen;
+// 		}
+// 		else{ 
+// 			details.innerHTML += ' &middot; ' + "closed";
+// 		}
+		
+		link.onclick = function() {
+		  setActive(listing);
+		  // When a menu item is clicked, animate the map to center
+		  // its associated locale and open its popup.
+		  map.setView(locale.getLatLng(), 16);
+		  locale.openPopup();
+		  return false;
+		};
+		// Marker interaction
+		locale.on('click', function(e) {
+		  // 1. center the map on the selected marker.
+		  map.panTo(locale.getLatLng());
+		  // 2. Set active the markers associated listing.
+		  setActive(listing);
+		});
+		popup += '</div>';
+		locale.bindPopup(popup);
+	});
+	
+	}
+	
+	 
+// 	function mapStuffmeterGPS(list3){
+// 		  var listings = document.getElementById('listings');
+// 		  var parkingMeters = L.mapbox.featureLayer();
+// 	  
+// 		  var markers = new L.MarkerClusterGroup({
+// 		  animateAddingMarker:true,
+// 		   maxClusterRadius: 500, 
+// 		   spiderfyOnMaxZoom: true, 
+// 		   zoomToBoundsOnClick: true,
+// 		   iconCreateFunction: function(cluster) {
+// 			   return new L.DivIcon({
+// 				   iconSize: [40, 20],
+// 				   html: '<div style="text-align:center;color:#fff;background:' +
+// 				   '#4fba70' + '">' + cluster.getChildCount() + '</div>'
+// 				});
+// 			} 
+// 		   });
+// 	  
+// 		  //console.log(geojson3);
+// 		  parkingMeters.setGeoJSON(geojson3);
+// 		  map.fitBounds(parkingMeters.getBounds());
+// 	  
+// 		  markers.addLayer(parkingMeters);
+// 		  map.addLayer(markers);
+// 	  
+// 		  markers.on('cluseterclick', function (a) {a.layer.zoomToBounds();});
+// 		  markers.on('cluseterclick', function (a) { mapStuffmeters(list)});
+// 	  
+// 	  	parkingMeters.eachLayer(function(locale) {
+// 		// Shorten locale.feature.properties to just `prop` so we're not
+// 		// writing this long form over and over again.
+// 		var prop = locale.feature.properties;
+// 		// Each marker on the map.
+// 		var popup = '<h2>Parking Meters</h2><div>' + prop.meteraddress;
+// 		//var listing = listings.appendChild(document.createElement('div'));
+// 		listing.className = 'item';
+// 		var link = listing.appendChild(document.createElement('a'));
+// 		link.href = '#';
+// 		link.className = 'title';
+// 		link.innerHTML = prop.meteraddress;
+// 	
+// 		var details = listing.appendChild(document.createElement('div'));
+// 		if (prop.title) {
+// 		  details.innerHTML = "Parking Meters";
+// 		}
+// 	
+// 		if (prop.capcolor){
+// 			details.innerHTML += ' &middot; ' + prop.capcolor;
+// 		}
+// 	
+// 		
+// 		link.onclick = function() {
+// 		  setActive(meterlisting);
+// 		  // When a menu item is clicked, animate the map to center
+// 		  // its associated locale and open its popup.
+// 		  map.setView(locale.getLatLng(), 16);
+// 		  locale.openPopup();
+// 		  return false;
+// 		};
+// 		// Marker interaction
+// 		locale.on('click', function(e) {
+// 		  // 1. center the map on the selected marker.
+// 		  map.panTo(locale.getLatLng());
+// 		  // 2. Set active the markers associated listing.
+// 		  setActive(listing);
+// 		});
+// 		popup += '</div>';
+// 		locale.bindPopup(popup);
+// 	});
+// 	
+// }
+ 
+</script>
+</body>
+</html>
