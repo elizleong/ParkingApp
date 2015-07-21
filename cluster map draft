@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset=utf-8 />
+  <title>Parking App</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700' rel='stylesheet'>
+  <script src='https://api.tiles.mapbox.com/mapbox.js/v2.1.4/mapbox.js'></script>
+  <link href='https://api.tiles.mapbox.com/mapbox.js/v2.1.4/mapbox.css' rel='stylesheet' />
+  
+  <script src='https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/leaflet.markercluster.js'></script>
+  <link href='https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/MarkerCluster.css' rel='stylesheet' />
+  <link href='https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/MarkerCluster.Default.css' rel='stylesheet' />
+
+  <style>
+  		
+		body {
+		color:#404040;
+		font:400 15px/22px 'Source Sans Pro', 'Helvetica Neue', Sans-serif;
+		margin:0;
+		padding:0;
+		-webkit-font-smoothing:antialiased;
+		}
+		/* 
+		if(prop.type==="Private"){
+			garage.style.visibility = "hidden";
+		}
+		else{
+		
+ */	
+		{
+		-webkit-box-sizing:border-box;
+		-moz-box-sizing:border-box;
+		box-sizing:border-box;
+		}
+		h1 {
+		font-size:22px;
+		margin:0;
+		font-weight:400;
+		}
+		a {
+		color:#404040;
+		text-decoration:none;
+		}
+		a:hover { color:#101010; }
+
+		.sidebar {
+		position:absolute;
+		width:23.3333%;
+		height:100%;
+		top:0;left:0;
+		overflow:hidden;
+		border-right:1px solid rgba(0,0,0,0.25);
+		}
+		.pad2 {
+		padding:20px;
+		}
+		.quiet {
+		color:#888;
+		}
+		.map {
+		position:absolute;
+		left:23.3333%;
+		width:76.6666%;
+		top:0;bottom:0;
+		}
+		.heading {
+		background:#fff;
+		border-bottom:1px solid #eee;
+		height:60px;
+		line-height:60px;
+		padding:0 10px;
+		}
+		.listings {
+		height:100%;
+		overflow:auto;
+		padding-bottom:60px;
+		}
+		.listings .item {
+		display:block;
+		border-bottom:1px solid #eee;
+		padding:10px;
+		text-decoration:none;
+		}
+		.listings .item:last-child { border-bottom:none; }
+		.listings .item .title {
+		display:block;
+		color:#00853e;
+		font-weight:700;
+		}
+		.listings .item .title small { font-weight:400; }
+		.listings .item.active .title,
+		.listings .item .title:hover { color:#8cc63f; }
+		.listings .item.active {
+		background-color:#f8f8f8;
+		}
+
+		::-webkit-scrollbar {
+		width:3px;
+		height:3px;
+		border-left:0;
+		background:rgba(0,0,0,0.1);
+		}
+		::-webkit-scrollbar-track {
+		background:none;
+		}
+		::-webkit-scrollbar-thumb {
+		background:#00853e;
+		border-radius:0;
+		}
+
+		.clearfix { display:block; }
+		.clearfix:after {
+		content:'.';
+		display:block;
+		height:0;
+		clear:both;
+		visibility:hidden;
+		}
+
+		/* Marker tweaks */
+		.leaflet-popup-close-button {
+		display:none;
+		}
+		.leaflet-popup-content {
+		font:400 15px/22px 'Source Sans Pro', 'Helvetica Neue', Sans-serif;
+		padding:0;
+		width:200px;
+		}
+		.leaflet-popup-content-wrapper {
+		padding:0;
+		}
+		.leaflet-popup-content h3 {
+		background:#91c949;
+		color:#fff;
+		margin:0;
+		display:block;
+		padding:10px;
+		border-radius:3px 3px 0 0;
+		font-weight:700;
+		margin-top:-15px;
+		}
+		.leaflet-popup-content div {
+		padding:10px;
+		}
+		.leaflet-container .leaflet-marker-icon { cursor:pointer; }
+  </style>
+</head>	
+<body>
+  <div class='sidebar'>
+    <div class='heading'>
+      <h1>All SF locations</h1>
+    </div>
+    <div id='listings' class='listings'></div>
+  </div>
+  <div id='map' class='map'> </div>
+  <script>
+  
+  	var garageDataJSON_list = [];
+  	var disabilityDataJSON_list = [];
+  	var geojson = [];
+  	var geojson2 = [];
+  	
+  	//garage data:
+  	function loadJSON(callback) {  
+  		 
+		var xobj = new XMLHttpRequest();
+			xobj.overrideMimeType("application/json");
+		xobj.open('GET', 'https://data.sfgov.org/api/views/9qrz-nwix/rows.json?accessType=DOWNLOAD', true); // Replace 'my_data' with the path to your file
+		xobj.onreadystatechange = function () {
+			  if (xobj.readyState == 4 && xobj.status == "200") {
+				// Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+				callback(xobj.responseText);
+			  }
+		};
+		xobj.send(null);
+	}
+	
+  	
+	function garageData() {
+		var actual_JSON;
+		loadJSON(function(response) {
+			// Parse JSON string into object
+			actual_JSON = JSON.parse(response);
+		
+			//console.log(actual_JSON.data[0]);
+			
+			for(var i = 0; i < actual_JSON.data.length; i++){
+					// garageDataJSON_list[i].garageStreetName
+				var actualJSON_object = {
+					"garage" : actual_JSON.data[i],
+					"garageStreetName" : actual_JSON.data[i][9],
+					"garageLatitude" : actual_JSON.data[i][17][1],	
+					"garageLongitude" : actual_JSON.data[i][17][2],
+					"garageType" : actual_JSON.data[i][8],
+				// this is for Olivia to put in the markers <input type = "hidden"
+				// if (garageType == "Private") {
+	// 				garage.style.visibility = "hidden";
+	// 				console.log(garage);
+	// 			}
+				}
+				garageDataJSON_list.push(actualJSON_object);
+			}
+					
+			//console.log(garageDataJSON_list);
+		
+			//console.log("In inner loadJSON function...");
+			//console.log(garageDataJSON_list);
+			createGarageElements();
+			mapStuff(geojson);
+		});
+	}
+	
+	// set up the garage data
+	garageData();
+	disabilityData();
+
+	//console.log("test");
+	
+	// set up Mapbox instance
+  	L.mapbox.accessToken = 'pk.eyJ1Ijoia2FpbGV5MTQiLCJhIjoiMmJlOTJjMmVmN2NjYTNkNjVmNWZkYWUyYjc2Nzg5MTMifQ.xCk6njEZAFMOSp2S7ESoDA';
+  	
+  	//console.log(garageDataJSON_list);
+  	
+  	function createGarageElements(){
+		for(var i = 0; i < garageDataJSON_list.length; i++){
+			var element = {
+				"type": "Feature",
+				"geometry": {
+				  "type": "Point",
+				  "coordinates": [
+					garageDataJSON_list[i].garageLongitude,
+					garageDataJSON_list[i].garageLatitude
+				  ]
+				},
+				"properties": {
+				  //"pPHformated": "$15/hour",
+				  //"pricePerHour": "15",
+				  //"title": "Golden Gateway Garage",
+				  "address": garageDataJSON_list[i].garageStreetName,
+				  "city": "San Francisco",
+				  "country": "United States",
+				  "state": "CA",
+				  'marker-size': 'small',
+				  'marker-color': '#000000',
+				  "garagetype": garageDataJSON_list[i].garageType,
+				  // if (prop.garagetype==="Private"){
+// 				  	'marker-color': '#FFFFFF',
+// 				  }
+// 				  else{
+// 				  	'marker-color': '#000000',
+// 				  }
+				}
+			};
+			//console.log(element);
+			geojson.push(element);
+			
+		}
+	}  
+	
+	//disability parking stuff:		
+	function disabilityData() {
+		var actual_JSONDisability;
+		loadJSONDisability(function(response) {
+			// Parse JSON string into object
+			actual_JSONDisability= JSON.parse(response);
+		
+			console.log(actual_JSONDisability.data[0])
+			
+			for(var i = 0; i < actual_JSONDisability.data.length; i++){
+				var actualJSONdisability_object = {
+					"disability" : actual_JSONDisability.data[i],
+					"disabilityStreetName" : actual_JSONDisability.data[i][8],
+					"disabilityLatitude" : actual_JSONDisability.data[i][16][1],	
+					"disabilityLongitude" : actual_JSONDisability.data[i][16][2],
+				}		
+				disabilityDataJSON_list.push(actualJSONdisability_object);
+			}
+			
+			createDisabilityElements();
+			mapStuffdisability(geojson2);
+		});
+	}
+	
+  	function loadJSONDisability(callback) {   
+		var xobjDisability = new XMLHttpRequest();
+			xobjDisability.overrideMimeType("application/json");
+		xobjDisability.open('GET', 'https://data.sfgov.org/api/views/wc6f-brai/rows.json?accessType=DOWNLOAD', true); // Replace 'my_data' with the path to your file
+		xobjDisability.onreadystatechange = function () {
+			  if (xobjDisability.readyState == 4 && xobjDisability.status == "200") {
+				// Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+				callback(xobjDisability.responseText);
+			  }
+		};
+		xobjDisability.send(null);  
+	}
+	
+  			 
+
+function createDisabilityElements(){
+			for(var i = 0; i < disabilityDataJSON_list.length; i++){
+			var elementDisability = {
+				"type": "Feature",
+				"geometry": {
+				  "type": "Point",
+				  "coordinates": [
+					disabilityDataJSON_list[i].disabilityLongitude,
+					disabilityDataJSON_list[i].disabilityLatitude
+				  ]
+				},
+				"properties": {
+				  //"pPHformated": "$15/hour",
+				  //"pricePerHour": "15",
+				  //"title": "Golden Gateway Garage",
+				  "disabilityaddress": disabilityDataJSON_list[i].disabilityStreetName,
+				  "city": "San Francisco",
+				  "country": "United States",
+				  "state": "CA",
+				  'marker-size': 'small',
+				  'marker-color': '#FFFFFF',
+				  
+				}
+		};
+			//console.log(elementDisability);
+			geojson2.push(elementDisability);
+			}
+}
+
+//end of disability data
+
+  var map = L.mapbox.map('map', 'kailey14.4ef6fb70')
+  	.addLayer(L.mapbox.tileLayer('mapbox.streets'))
+
+  	.addControl(L.mapbox.geocoderControl('mapbox.places', {
+ }));
+
+  map.scrollWheelZoom.disable();
+
+	function mapStuff(list){
+		var listings = document.getElementById('listings');
+	  	var parkingGarages = L.mapbox.featureLayer();
+	  	
+	  	var markersgarage = new L.MarkerClusterGroup({animateAddingMarker:true, maxClusterRadius: 300, spiderfyOnMaxZoom: true, zoomToBoundsOnClick: true, disableClusteringAtZoom: 17 });
+
+	  	parkingGarages.setGeoJSON(geojson);
+	  	map.fitBounds(parkingGarages.getBounds());
+	  
+	  	markersgarage.addLayer(parkingGarages);
+	  	map.addLayer(markersgarage);
+	  
+	  	markersgarage.on('cluseterclick', function (a) {a.layer.zoomToBounds();});
+	  	markersgarage.on('cluseterclick', function (a) { mapStuff(list)});
+	 	parkingGarages.eachLayer(function(locale) {
+
+			// Shorten locale.feature.properties to just `prop` so we're not
+			// writing this long form over and over again.
+			var prop = locale.feature.properties;
+
+			// Each marker on the map.
+			var popup = '<h3>Garage</h3><div>' + prop.address;
+
+			var listing = listings.appendChild(document.createElement('div'));
+			listing.className = 'item';
+
+			var link = listing.appendChild(document.createElement('a'));
+			link.href = '#';
+			link.className = 'title';
+
+			link.innerHTML = prop.address;
+	
+
+			var details = listing.appendChild(document.createElement('div'));
+			if (prop.title) {
+			  details.innerHTML = "Parking Garages";
+			}
+	
+			if (prop.hoursopen){
+				details.innerHTML += ' &middot; ' + prop.hoursopen;
+			}
+			else{ 
+				details.innerHTML += ' &middot; ' + "closed";
+			}
+		
+
+			link.onclick = function() {
+			  setActive(listing);
+
+			  // When a menu item is clicked, animate the map to center
+			  // its associated locale and open its popup.
+			  map.setView(locale.getLatLng(), 16);
+			  locale.openPopup();
+			  return false;
+			};
+
+			// Marker interaction
+			locale.on('click', function(e) {
+			  // 1. center the map on the selected marker.
+			  map.panTo(locale.getLatLng());
+
+			  // 2. Set active the markers associated listing.
+			  setActive(listing);
+			});
+
+			popup += '</div>';
+			locale.bindPopup(popup);
+
+
+		});
+	 
+	}
+
+	  
+	  function setActive(el) {
+		var clickPlaces = listings.getElementsByTagName('div');
+		for (var i = 0; i < clickPlaces.length; i++) {
+		  clickPlaces[i].className = clickPlaces[i].className
+		  .replace(/active/, '').replace(/\s\s*$/, '');
+		}
+
+		el.className += ' active';
+	  }
+	  
+	 
+	function mapStuffdisability(list2){
+
+		  var listings = document.getElementById('listings');
+		  var parkingDisability = L.mapbox.featureLayer();
+	  
+		  var markers = new L.MarkerClusterGroup({animateAddingMarker:true, maxClusterRadius: 500, spiderfyOnMaxZoom: true, zoomToBoundsOnClick: true });
+	  
+		  console.log(geojson2);
+		  parkingDisability.setGeoJSON(geojson2);
+		  map.fitBounds(parkingDisability.getBounds());
+	  
+		  markers.addLayer(parkingDisability);
+		  map.addLayer(markers);
+	  
+		  markers.on('cluseterclick', function (a) {a.layer.zoomToBounds();});
+		  markers.on('cluseterclick', function (a) { mapStuffdisability(list)});
+	  
+	  	parkingDisability.eachLayer(function(locale) {
+
+		// Shorten locale.feature.properties to just `prop` so we're not
+		// writing this long form over and over again.
+		var prop = locale.feature.properties;
+
+		// Each marker on the map.
+		var popup = '<h3>Disability Parking</h3><div>' + prop.disabilityaddress;
+
+		var listing = listings.appendChild(document.createElement('div'));
+		listing.className = 'item';
+
+		var link = listing.appendChild(document.createElement('a'));
+		link.href = '#';
+		link.className = 'title';
+
+		link.innerHTML = prop.disabilityaddress;
+	
+
+		var details = listing.appendChild(document.createElement('div'));
+		if (prop.title) {
+		  details.innerHTML = "Disabled Parking";
+		}
+	
+		if (prop.hoursopen){
+			details.innerHTML += ' &middot; ' + prop.hoursopen;
+		}
+		else{ 
+			details.innerHTML += ' &middot; ' + "closed";
+		}
+		
+
+		link.onclick = function() {
+		  setActive(listing);
+
+		  // When a menu item is clicked, animate the map to center
+		  // its associated locale and open its popup.
+		  map.setView(locale.getLatLng(), 16);
+		  locale.openPopup();
+		  return false;
+		};
+
+		// Marker interaction
+		locale.on('click', function(e) {
+		  // 1. center the map on the selected marker.
+		  map.panTo(locale.getLatLng());
+
+		  // 2. Set active the markers associated listing.
+		  setActive(listing);
+		});
+
+		popup += '</div>';
+		locale.bindPopup(popup);
+
+
+	});
+	
+	}
+
+
+
+ 
+</script>
+</body>
+</html>
