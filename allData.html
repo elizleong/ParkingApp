@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+// Getting data for parking lots and garages
+function loadJSON(callback) {   
+    var xobj = new XMLHttpRequest();
+        xobj.overrideMimeType("application/json");
+    xobj.open('GET', 'https://data.sfgov.org/api/views/9qrz-nwix/rows.json?accessType=DOWNLOAD', true); // Replace 'my_data' with the path to your file
+    xobj.onreadystatechange = function () {
+          if (xobj.readyState == 4 && xobj.status == "200") {
+            // Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+            callback(xobj.responseText);
+          }
+    };
+    xobj.send(null);  
+ }
+ 
+ var garageDataJSON_list = [];
+ 
+function garageData() {
+	var actual_JSON;
+		loadJSON(function(response) {
+		// Parse JSON string into object
+		actual_JSON = JSON.parse(response);
+		
+		//console.log(actual_JSON.data[0]);
+		
+		
+		for(var i = 0; i < actual_JSON.data.length; i++){
+			var actualJSON_object = {
+				"garage" : actual_JSON.data[i],
+				"garageStreetName" : actual_JSON.data[i][9],
+				"garageLatitude" : actual_JSON.data[i][17][1],	
+				"garageLongitude" : actual_JSON.data[i][17][2],
+				"garageType" : actual_JSON.data[i][8]
+			// this is for Olivia to put in the markers <input type = "hidden"
+			// if (garageType == "Private") {
+// 				garage.style.visibility = "hidden";
+// 				console.log(garage);
+// 			}
+			}
+			garageDataJSON_list.push(actualJSON_object);
+		}
+		
+	});
+}
+//getting data for disability parking spots
+ 
+ function loadJSONDisability(callback) {   
+    var xobjDisability = new XMLHttpRequest();
+        xobjDisability.overrideMimeType("application/json");
+    xobjDisability.open('GET', 'https://data.sfgov.org/api/views/wc6f-brai/rows.json?accessType=DOWNLOAD', true); // Replace 'my_data' with the path to your file
+    xobjDisability.onreadystatechange = function () {
+          if (xobjDisability.readyState == 4 && xobjDisability.status == "200") {
+            // Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+            callback(xobjDisability.responseText);
+          }
+    };
+    xobjDisability.send(null);  
+ }
+ 
+function disabilityData() {
+	var actualDisability_JSON;
+		loadJSONDisability(function(response) {
+		// Parse JSON string into object
+		actual_JSONDisability = JSON.parse(response);
+		
+		//console.log(actual_JSONDisability.data[0]);
+		
+		
+		for(var i = 0; i < actual_JSONDisability.data.length; i++){
+			var disability = actual_JSONDisability.data[i];
+			var disabilityStreetName = actual_JSONDisability.data[i][8];
+			var disabilityLatitude = actual_JSONDisability.data[i][16][1];	
+			var disabilityLongitude = actual_JSONDisability.data[i][16][2];	
+		}
+		
+	});
+}
+//getting data for meters
+ function loadJSONMeters(callback) {   
+    var xobjMeters = new XMLHttpRequest();
+        xobjMeters.overrideMimeType("application/json");
+    xobjMeters.open('GET', 'https://data.sfgov.org/api/views/6cqg-dxku/rows.json?accessType=DOWNLOAD', true); // Replace 'my_data' with the path to your file
+    xobjMeters.onreadystatechange = function () {
+          if (xobjMeters.readyState == 4 && xobjMeters.status == "200") {
+            // Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+            callback(xobjMeters.responseText);
+          }
+    };
+    xobjMeters.send(null);  
+ }
+ 
+ var metersDataJSON_list = []; 
+ 
+function metersData (){
+	var actualMeters_JSON;
+		loadJSONMeters(function(response) {
+		// Parse JSON string into object
+		actual_JSONMeters = JSON.parse(response);
+		
+		//console.log(actual_JSONMeters.data[0]);
+		
+		
+		for(var i = 0; i < actual_JSONMeters.data.length; i++){
+			var actualMetersJSON_object = {
+				"meters" : actual_JSONMeters.data[i],
+				"metersStreetName" : actual_JSONMeters.data[i][8],
+				"daysMeterOperating" : actual_JSONMeters.data[i][15],	
+				"timeMeterStart" : actual_JSONMeters.data[i][16],
+				"timeMeterEnd" : actual_JSONMeters.data[i][17],
+				"timeMeterLimit" : actual_JSONMeters.data[i][19],
+				"colorMeterRule" : actual_JSONMeters.data[i][11]
+			}
+			metersDataJSON_list.push(actualMetersJSON_object);
+			console.log(metersDataJSON_list);
+		}
+		
+	});
+}
+//getting data for meter rate
+ function loadJSONMeterRate(callback) {   
+    var xobjMeterRate = new XMLHttpRequest();
+        xobjMeterRate.overrideMimeType("application/json");
+    xobjMeterRate.open('GET', 'https://data.sfgov.org/api/views/fwjv-32uk/rows.json?accessType=DOWNLOAD', true); // Replace 'my_data' with the path to your file
+    xobjMeterRate.onreadystatechange = function () {
+          if (xobjMeterRate.readyState == 4 && xobjMeterRate.status == "200") {
+            // Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+            callback(xobjMeterRate.responseText);
+          }
+    };
+    xobjMeterRate.send(null);  
+ }
+ 
+var meterRateDataJSON_list = []; 
+ 
+function meterRateData (){
+	var actualMeterRate_JSON;
+		loadJSONMeterRate(function(response) {
+		// Parse JSON string into object
+		actual_JSONMeterRate = JSON.parse(response);
+		
+		//console.log(actual_JSONMeterRate.data[0]);
+		
+		for(var i = 0; i < actual_JSONMeterRate.data.length; i++){
+		
+			var actualMeterRateJSON_object = {
+				"meterRate" : actual_JSONMeterRate.data[i],
+				"meterID" : actual_JSONMeterRate.data[i][0],
+				"daysMeterRateOperating" : actual_JSONMeterRate.data[i][10],	
+				"timeMeterRateStart" : actual_JSONMeterRate.data[i][11],
+				"timeMeterRateEnd" : actual_JSONMeterRate.data[i][12],
+				"baseMeterRate" : actual_JSONMeterRate.data[i][14]
+			//console.log(baseMeterRate);
+			// if (meterID === meterID) {
+// 				
+// 			}
+			}
+			
+			meterRateDataJSON_list.push(actualMeterRateJSON_object);
+		}
+		
+	});
+}
+//getting data for Tow Away spots
+function loadJSONTow(callback) {   
+    var xobjTow = new XMLHttpRequest();
+        xobjTow.overrideMimeType("application/json");
+    xobjTow.open('GET', 'https://data.sfgov.org/api/views/cqn5-muyy/rows.json?accessType=DOWNLOAD', true); // Replace 'my_data' with the path to your file
+    xobjTow.onreadystatechange = function () {
+          if (xobjTow.readyState == 4 && xobjTow.status == "200") {
+            // Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+            callback(xobjTow.responseText);
+          }
+    };
+    xobjTow.send(null);  
+ }
+ 
+var towDataJSON_list = [];
+ 
+function towData (){
+	var actualTow_JSON;
+		loadJSONTow(function(response) {
+		// Parse JSON string into object
+		actual_JSONTow = JSON.parse(response);
+		
+		//console.log(actual_JSONTow.data[0]);
+		
+		
+		//didn't add this in the github yet!!!	
+		for(var i = 0; i < actual_JSONTow.data.length; i++){
+			var actualTowJSON_object = {
+				"tow" : actual_JSONTow.data[i],
+				"towRange" : actual_JSONTow.data[i][9] + "-" + actual_JSONTow.data[i][10] + " " + actual_JSONTow.data[i][11],
+				"daysTowOperating" : actual_JSONTow.data[i][17],	
+				"dateTowStart" : actual_JSONTow.data[i][15],
+				"dateTowEnd" : actual_JSONTow.data[i][16],
+				"timeTowStart" : actual_JSONTow.data[i][19],
+				"timeTowEnd" : actual_JSONTow.data[i][20]
+			}	
+		towDataJSON_list.push(actualTowJSON_object);
+		}
+		
+	});
+}
+garageData();
+disabilityData();
+metersData();
+meterRateData();
+towData();
+</script>
+
+</html>
